@@ -1,21 +1,27 @@
-import { Router } from "express";
-import passport from "passport";
-import jwt from "jsonwebtoken";
-import config from "../config/config.js";
+import { sendRecoveryEmail } from "../utils/mailer.js";
+import { resetUserPassword } from "../services/user.service.js";
+import UserRepository from "../dao/repositories/user.repository.js";
+const userRepo = new UserRepository();
 
-const router = Router();
+// Solicita recuperación
+router.post("/forgot-password", async (req, res) => {
+  const { email } = req.body;
+  const user = await userRepo.getByEmail(email);
+  if (!user) return res.status(404).send({ message: "User not found" });
 
-router.post("/register", passport.authenticate("register", { session: false }), (req, res) => {
-    res.status(201).json({ status: "success", payload: req.user });
+  const token = jwt.sign({ id: user._id }, config.jwtSecret, { expiresIn: "1h" });
+  await sendRecoveryEmail(email, token);
+  res.send({ message: "Email sent" });
 });
 
-router.post("/login", passport.authenticate("login", { session: false }), (req, res) => {
-    const token = jwt.sign({ id: req.user._id, email: req.user.email, role: req.user.role }, config.jwtSecret, { expiresIn: "1h" });
-    res.cookie("jwtCookie", token, { httpOnly: true, maxAge: 3600000 }).json({ status: "success", payload: req.user });
+// Cambia la contraseña
+router.post("/reset-password", async (req, res) => {
+  const { token, newPassword } = req.body;
+  try {
+    const decoded = jwt.verify(token, config.jwtSecret);
+    await resetUserPassword(decoded.id, newPassword);
+    res.send({ message: "Password updated" });
+  } catch (err) {
+    res.status(400).send({ message: "Invalid or expired token" });
+  }
 });
-
-router.get("/current", passport.authenticate("jwt", { session: false }), (req, res) => {
-    res.json({ status: "success", payload: req.user });
-});
-
-export default router;
