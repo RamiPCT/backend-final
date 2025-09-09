@@ -1,12 +1,14 @@
 import { Router } from "express";
-import sessionRoutes from "./session.routes.js";
 import userRoutes from "./user.routes.js";
+import sessionRoutes from "./session.routes.js";
+import productRoutes from "./products.routes.js";
 import cartRoutes from "./cart.routes.js";
 
 const router = Router();
 
-router.use("/sessions", sessionRoutes);
 router.use("/users", userRoutes);
-router.use("/cart", cartRoutes);
+router.use("/sessions", sessionRoutes);
+router.use("/products", productRoutes);
+router.use("/carts", cartRoutes);
 
 export default router;
